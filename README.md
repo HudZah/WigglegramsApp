@@ -2,6 +2,16 @@
 
 3DSync is a Python application that allows you to upload, view, and align multiple images. This is ideal for creating 3D gif effects from Cameras like Nishika N8000 and Reto 3D. It provides a user-friendly interface to select specific points in each image, aligns the images based on these points, and generates a GIF from the aligned images. 
 
+
+Create gifs like these!
+
+https://github.com/HudZah/3DSync/assets/56107325/75e9a4b1-d8c6-4de2-b440-a1d8b89e7b42
+
+https://github.com/HudZah/3DSync/assets/56107325/df97e244-185e-4436-ba9b-b75839e4af44
+
+
+
+
 ## Features
 
 - Upload individual photos or an entire folder of photos.
