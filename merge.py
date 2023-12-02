@@ -24,13 +24,6 @@ class PhotoApp:
             self.root, text="Upload Folder", command=self.upload_folder
         )
         self.upload_folder_button.pack()
-        # self.select_button = tk.Button(
-        #     self.root,
-        #     text="Select Point",
-        #     state=tk.DISABLED,
-        #     command=self.confirm_point,
-        # )
-        # self.select_button.pack()
         self.next_button = tk.Button(
             self.root, text="Next", state=tk.DISABLED, command=self.next_photo
         )
@@ -48,12 +41,8 @@ class PhotoApp:
         self.generate_button.pack()
         self.reset_button = tk.Button(self.root, text="Reset", command=self.reset)
         self.reset_button.pack()
-        self.root.bind(
-            "<Left>", self.prev_photo
-        )  # Bind left arrow key to prev_photo function
-        self.root.bind(
-            "<Right>", self.next_photo
-        )  # Bind right arrow key to next_photo function
+        self.root.bind("<Left>", self.prev_photo)
+        self.root.bind("<Right>", self.next_photo)
 
     def upload_photo(self):
         filepaths = filedialog.askopenfilenames()
@@ -83,43 +72,32 @@ class PhotoApp:
         self.open_photo(self.photos[self.current_photo_index][0])
 
     def open_photo(self, filepath):
-        # Destroy the current image if it exists
         if hasattr(self, "canvas"):
             self.canvas.destroy()
 
         self.img = Image.open(filepath)
-        self.original_img_size = self.img.size  # Save the original image size
+        self.original_img_size = self.img.size
 
-        # Half the screen width and height
         screen_width, screen_height = (
             self.root.winfo_screenwidth() / 1.3,
             self.root.winfo_screenheight() / 1.3,
         )
-        # Calculate the ratio to resize the image to fit within the half screen size
         ratio = min(screen_width / self.img.width, screen_height / self.img.height)
-        # Resize the image using the calculated ratio
         self.img = self.img.resize(
             (int(self.img.width * ratio), int(self.img.height * ratio))
         )
         photo = ImageTk.PhotoImage(self.img)
-        # Create a canvas with the resized image dimensions
         self.canvas = tk.Canvas(
             self.root, width=self.img.size[0], height=self.img.size[1]
         )
         self.canvas.create_image(0, 0, image=photo, anchor="nw")
         self.canvas.image = photo
         self.canvas.bind("<Button-1>", self.select_point)
-        self.canvas.bind(
-            "<Motion>", self.show_magnifier
-        )  # Bind mouse motion event to show_magnifier function
-        self.canvas.bind(
-            "<MouseWheel>", self.zoom_image
-        )  # Bind mouse wheel event to zoom_image function
+        self.canvas.bind("<Motion>", self.show_magnifier)
+        self.canvas.bind("<MouseWheel>", self.zoom_image)
         self.canvas.pack()
-        # self.select_button.config(state=tk.NORMAL)
         if len(self.photos) > 1:
             self.next_button.config(state=tk.NORMAL)
-        # If there exists a point for the photo to be opened, draw the point with select_point
         if len(self.points) > self.current_photo_index:
             point = self.points[self.current_photo_index]
             event = tk.Event()
@@ -130,10 +108,9 @@ class PhotoApp:
             self.select_point(event)
 
     def show_magnifier(self, event):
-        # Create a magnifier glass on the cursor when hovering over the image
         if hasattr(self, "magnifier"):
             self.canvas.delete(self.magnifier)
-        magnifier_size = 200  # Size of the magnifier glass
+        magnifier_size = 200
         magnified_img = self.img.crop(
             (
                 event.x - magnifier_size // 2,
@@ -144,7 +121,6 @@ class PhotoApp:
         ).resize((magnifier_size * 2, magnifier_size * 2))
         self.magnifier = ImageTk.PhotoImage(magnified_img)
         self.canvas.create_image(event.x, event.y, image=self.magnifier)
-        # If a point has been selected, show it on the magnifier
         if hasattr(self, "point"):
             point_x = self.point[0] * (
                 self.canvas.winfo_width() / self.original_img_size[0]
@@ -156,7 +132,6 @@ class PhotoApp:
                 abs(event.x - point_x) <= magnifier_size // 2
                 and abs(event.y - point_y) <= magnifier_size // 2
             ):
-                # Delete the previous point if it exists
                 if hasattr(self, "point_text"):
                     self.canvas.delete(self.point_text)
                 self.point_text = self.canvas.create_text(
@@ -167,7 +142,6 @@ class PhotoApp:
                 )
 
     def zoom_image(self, event):
-        # Zoom in when the mouse wheel is scrolled up, and zoom out when it is scrolled down
         if event.delta > 0:
             self.canvas.scale("all", 0, 0, 1.1, 1.1)
         else:
@@ -177,7 +151,6 @@ class PhotoApp:
     def select_point(self, event):
         if hasattr(self, "point"):
             self.canvas.delete(self.point_text)
-        # Rescale the points to match the original image dimensions
         self.point = (
             event.x * (self.original_img_size[0] / self.canvas.winfo_width()),
             event.y * (self.original_img_size[1] / self.canvas.winfo_height()),
@@ -217,33 +190,25 @@ class PhotoApp:
         self.align_and_generate()
 
     def align_and_generate(self):
-        # Ensure there is a reference point and at least one other point to align
         if len(self.points) < 2:
             print("Not enough points to align.")
             return
 
-        # The reference point will be the first one selected
         ref_point = np.array(self.points[0], dtype="float32")
 
-        # Initialize an array to hold the transformed images
         transformed_images = []
 
         for i, (path, date) in enumerate(self.photos):
-            # Open the image
             img = cv2.imread(path)
             selected_point = np.array(self.points[i], dtype="float32")
 
-            # Calculate the translation matrix
             dx, dy = ref_point - selected_point
             M = np.float32([[1, 0, dx], [0, 1, dy]])
 
-            # Apply the translation
             transformed_img = cv2.warpAffine(img, M, (img.shape[1], img.shape[0]))
 
-            # Save the transformed image for GIF creation
             transformed_images.append(transformed_img)
 
-        # Now create the GIF with the transformed images
         self.create_gif(transformed_images)
 
     def create_gif(self, images):
