@@ -209,7 +209,8 @@ class PhotoApp:
                 self.points[self.current_photo_index] = self.point
             else:
                 self.points.append(self.point)
-            if len(self.photos) == len(self.points):
+            print(f"Number of poitns", len(self.points))
+            if 3 == len(self.points):
                 self.generate_button.config(state=tk.NORMAL)
 
     def next_photo(self, event=None):
