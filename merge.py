@@ -16,6 +16,9 @@ class PhotoApp:
         self.photos = []
         self.points = []
         self.current_photo_index = 0
+        self.rotate = (
+            tk.BooleanVar()
+        )  # Add a variable to hold the state of the checkbox
         self.upload_photo_button = tk.Button(
             self.root, text="Upload Photo", command=self.upload_photo
         )
@@ -24,6 +27,10 @@ class PhotoApp:
             self.root, text="Upload Folder", command=self.upload_folder
         )
         self.upload_folder_button.pack()
+        self.rotate_checkbox = tk.Checkbutton(  # Add a checkbox for rotation
+            self.root, text="Rotate", variable=self.rotate
+        )
+        self.rotate_checkbox.pack()
         self.next_button = tk.Button(
             self.root, text="Next", state=tk.DISABLED, command=self.next_photo
         )
@@ -44,6 +51,10 @@ class PhotoApp:
         self.root.bind("<Left>", self.prev_photo)
         self.root.bind("<Right>", self.next_photo)
 
+        # Create a frame to hold the photo previews
+        self.preview_frame = tk.Frame(self.root)
+        self.preview_frame.pack()
+
     def upload_photo(self):
         filepaths = filedialog.askopenfilenames()
         if len(filepaths) + len(self.photos) > 4:
@@ -53,7 +64,9 @@ class PhotoApp:
             date = datetime.datetime.now()
             self.photos.append((filepath, date))
         self.photos.sort(key=lambda x: os.path.getmtime(x[0]), reverse=True)
-        self.open_photo(self.photos[self.current_photo_index][0])
+        if len(self.photos) > self.current_photo_index:
+            self.open_photo(self.photos[self.current_photo_index][0])
+        self.update_previews()  # Update the photo previews
 
     def upload_folder(self):
         folderpath = filedialog.askdirectory()
@@ -69,6 +82,32 @@ class PhotoApp:
             date = datetime.datetime.now()
             self.photos.append((filepath, date))
         self.photos.sort(key=lambda x: os.path.getmtime(x[0]), reverse=True)
+        if len(self.photos) > self.current_photo_index:
+            self.open_photo(self.photos[self.current_photo_index][0])
+        self.update_previews()  # Update the photo previews
+
+    def update_previews(self):  # Add a function to update the photo previews
+        for widget in self.preview_frame.winfo_children():
+            widget.destroy()
+        for i, (filepath, date) in enumerate(self.photos):
+            img = Image.open(filepath)
+            img = img.resize((100, 100))  # Resize the image
+            photo = ImageTk.PhotoImage(img)
+            label = tk.Label(
+                self.preview_frame, image=photo, borderwidth=2, relief="solid"
+            )  # Add a border around the frame
+            label.image = photo
+            label.pack(side=tk.LEFT)
+            label.bind(
+                "<Button-1>", lambda e, i=i: self.switch_photo(i)
+            )  # Bind the click event to switch the photo
+            label_number = tk.Label(
+                self.preview_frame, text=str(i + 1)
+            )  # Add a number for each preview frame
+            label_number.pack(side=tk.LEFT)
+
+    def switch_photo(self, index):  # Add a function to switch the photo
+        self.current_photo_index = index
         self.open_photo(self.photos[self.current_photo_index][0])
 
     def open_photo(self, filepath):
@@ -159,10 +198,17 @@ class PhotoApp:
         self.point_text = self.canvas.create_text(
             event.x, event.y, text="x", fill="red"
         )
+        if len(self.points) > self.current_photo_index:
+            self.points[self.current_photo_index] = self.point
+        else:
+            self.points.append(self.point)
 
     def confirm_point(self):
         if hasattr(self, "point"):
-            self.points.append(self.point)
+            if len(self.points) > self.current_photo_index:
+                self.points[self.current_photo_index] = self.point
+            else:
+                self.points.append(self.point)
             if len(self.photos) == len(self.points):
                 self.generate_button.config(state=tk.NORMAL)
 
@@ -190,6 +236,7 @@ class PhotoApp:
         self.align_and_generate()
 
     def align_and_generate(self):
+        print(f"points are", self.points)
         if len(self.points) < 2:
             print("Not enough points to align.")
             return
@@ -205,7 +252,18 @@ class PhotoApp:
             dx, dy = ref_point - selected_point
             M = np.float32([[1, 0, dx], [0, 1, dy]])
 
-            transformed_img = cv2.warpAffine(img, M, (img.shape[1], img.shape[0]))
+            transformed_img = cv2.warpAffine(
+                img,
+                M,
+                (img.shape[1], img.shape[0]),
+                flags=cv2.INTER_LINEAR,
+                borderMode=cv2.BORDER_CONSTANT,
+            )
+
+            if self.rotate.get():  # Check if the rotate checkbox is checked
+                transformed_img = cv2.rotate(
+                    transformed_img, cv2.ROTATE_90_COUNTERCLOCKWISE
+                )  # Rotate the image
 
             transformed_images.append(transformed_img)
 
