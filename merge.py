@@ -106,7 +106,7 @@ class PhotoApp:
             )  # Add a number for each preview frame
             label_number.pack(side=tk.LEFT)
 
-    def switch_photo(self, index):  # Add a function to switch the photo
+    def switch_photo(self, index):
         self.current_photo_index = index
         self.open_photo(self.photos[self.current_photo_index][0])
 
